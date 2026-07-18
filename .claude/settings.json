@@ -1,0 +1,58 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "sh .satelle/hooks/satelle-hook.sh gate claude",
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit"
+      },
+      {
+        "hooks": [
+          {
+            "command": "sh .satelle/hooks/satelle-hook.sh commitgate claude",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "satelle reindex",
+            "type": "command"
+          },
+          {
+            "command": "satelle hook context",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "PATH=$HOME/.local/bin:$PATH satelle hook stopcheck",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "PATH=$HOME/.local/bin:$PATH satelle hook prompt",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}
