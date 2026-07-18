@@ -39,6 +39,7 @@ type containerView struct {
 	Service string
 	State   string
 	Status  string
+	Running bool
 	Ports   []portView
 }
 
@@ -48,9 +49,10 @@ type stackView struct {
 }
 
 type pageData struct {
-	Stacks    []stackView
-	Generated time.Time
-	Error     string
+	Stacks      []stackView
+	Generated   time.Time
+	Error       string
+	ShowStopped bool
 }
 
 func main() {
@@ -70,22 +72,26 @@ func main() {
 	col := newCollector(cli)
 	go col.run(ctx)
 
+	lc := &lifecycleServer{cli: cli}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-		data := pageData{Generated: time.Now()}
+		showStopped := r.URL.Query().Get("stopped") == "1"
+		data := pageData{Generated: time.Now(), ShowStopped: showStopped}
 		reqCtx, reqCancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer reqCancel()
 
-		list, err := cli.ContainerList(reqCtx, container.ListOptions{All: false})
+		// All=true so the toggle can reveal stopped; filter in groupByProject.
+		list, err := cli.ContainerList(reqCtx, container.ListOptions{All: true})
 		if err != nil {
 			data.Error = err.Error()
 			log.Printf("container list: %v", err)
 		} else {
-			data.Stacks = groupByProject(list)
+			data.Stacks = groupByProject(list, showStopped)
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -94,6 +100,7 @@ func main() {
 		}
 	})
 	mux.HandleFunc("/api/stream", col.serveSSE)
+	lc.register(mux)
 
 	addr := listenAddr
 	if v := os.Getenv("PORTSIDE_ADDR"); v != "" {
@@ -105,9 +112,13 @@ func main() {
 	}
 }
 
-func groupByProject(list []types.Container) []stackView {
+func groupByProject(list []types.Container, showStopped bool) []stackView {
 	groups := map[string][]containerView{}
 	for _, c := range list {
+		running := strings.EqualFold(c.State, "running")
+		if !showStopped && !running {
+			continue
+		}
 		project := c.Labels[labelComposeProject]
 		if project == "" {
 			project = noProjectLabel
@@ -155,6 +166,7 @@ func toContainerView(c types.Container) containerView {
 		Service: c.Labels[labelComposeService],
 		State:   c.State,
 		Status:  c.Status,
+		Running: strings.EqualFold(c.State, "running"),
 		Ports:   ports,
 	}
 }

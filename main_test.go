@@ -50,9 +50,24 @@ func TestGroupByProject(t *testing.T) {
 		},
 	}
 
-	stacks := groupByProject(list)
+// With a stopped container mixed in, default view hides it.
+	list = append(list, types.Container{
+		ID:     "eee",
+		Names:  []string{"/alpha-old-1"},
+		State:  "exited",
+		Status: "Exited (0)",
+		Labels: map[string]string{labelComposeProject: "alpha"},
+	})
+	stacks := groupByProject(list, false)
 	if len(stacks) != 3 {
 		t.Fatalf("got %d stacks, want 3", len(stacks))
+	}
+	if len(stacks[1].Containers) != 2 {
+		t.Fatalf("running-only alpha should have 2, got %d", len(stacks[1].Containers))
+	}
+	withStopped := groupByProject(list, true)
+	if len(withStopped[1].Containers) != 3 {
+		t.Fatalf("show-stopped alpha should have 3, got %d", len(withStopped[1].Containers))
 	}
 	// Sorted by project name: (no project), alpha, beta
 	if stacks[0].Name != noProjectLabel {

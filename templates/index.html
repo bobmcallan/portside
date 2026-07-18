@@ -4,28 +4,136 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>portside</title>
+  <script>
+    // Apply theme before paint (Satelle Design System: light default, dark via data-theme).
+    (function () {
+      try {
+        var t = localStorage.getItem('satelle-theme');
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <style>
+    /* Satelle Design System tokens (from satelle design project — self-contained, no CDN). */
     :root {
-      color-scheme: light dark;
-      font-family: system-ui, sans-serif;
-      line-height: 1.4;
+      --ink: #16181d;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --bg: #fbfbfa;
+      --accent: #2f6f4f;
+      --chip: #f0f1ef;
+      --panel: #ffffff;
+      --row-hover: #f6f7f6;
+      --fail: #e74c3c;
+      --ok: #2f6f4f;
+      --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      --content-max: 1100px;
+      --radius: 8px;
+      --control-height: 2.2rem;
     }
-    body { margin: 1.5rem; max-width: 64rem; }
-    header { margin-bottom: 1.25rem; }
-    h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
-    .meta { opacity: 0.7; font-size: 0.875rem; }
+    [data-theme="dark"] {
+      --ink: #e6e8eb;
+      --muted: #9aa1ab;
+      --line: #2a2d34;
+      --bg: #0e1013;
+      --accent: #5fae86;
+      --chip: #1b1e23;
+      --panel: #16191e;
+      --row-hover: #1a1d22;
+      --ok: #5fae86;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.5 "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .wrap {
+      width: 100%;
+      max-width: var(--content-max);
+      margin: 0 auto;
+      padding: 28px 24px 64px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 1rem;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 300;
+      letter-spacing: -0.02em;
+      text-transform: lowercase;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 12.5px;
+      font-family: var(--mono);
+      margin: 0.35rem 0 0;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    button, .btn {
+      font: inherit;
+      height: var(--control-height);
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.05s;
+    }
+    button:hover, .btn:hover { border-color: var(--accent); }
+    button:active, .btn:active { transform: translateY(1px); }
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    button.danger:hover { border-color: var(--fail); color: var(--fail); }
+    button.small {
+      height: 1.75rem;
+      padding: 0 8px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    label.toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
     .error {
-      border: 1px solid currentColor;
+      border: 1px solid var(--fail);
+      background: color-mix(in srgb, var(--fail) 11%, transparent);
+      color: var(--ink);
       padding: 0.75rem 1rem;
+      border-radius: var(--radius);
       margin-bottom: 1rem;
     }
     .host {
-      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-      border-radius: 0.375rem;
-      padding: 0.75rem 1rem;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
       margin-bottom: 1rem;
       display: grid;
-      gap: 0.5rem;
+      gap: 0.55rem;
     }
     .host-row {
       display: flex;
@@ -34,11 +142,12 @@
       align-items: center;
       font-size: 0.9rem;
     }
+    .host-row strong { font-weight: 600; text-transform: lowercase; }
     .bar {
       flex: 1 1 8rem;
       min-width: 8rem;
-      height: 0.5rem;
-      background: color-mix(in srgb, currentColor 12%, transparent);
+      height: 0.45rem;
+      background: var(--chip);
       border-radius: 999px;
       overflow: hidden;
     }
@@ -46,101 +155,203 @@
       display: block;
       height: 100%;
       width: 0%;
-      background: currentColor;
-      opacity: 0.55;
+      background: var(--accent);
     }
     .spark {
       width: 100%;
       height: 2rem;
       display: block;
+      color: var(--accent);
     }
-    section.stack {
-      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-      border-radius: 0.375rem;
-      padding: 0.75rem 1rem;
+    .num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 0.85rem; }
+    details.stack {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0;
       margin-bottom: 0.75rem;
+      overflow: hidden;
     }
-    section.stack h2 {
-      margin: 0 0 0.5rem;
-      font-size: 1.05rem;
+    details.stack[open] { border-color: var(--line); }
+    details.stack > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 0.7rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
     }
+    details.stack > summary::-webkit-details-marker { display: none; }
+    details.stack > summary:hover { background: var(--row-hover); }
+    .stack-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-left: auto; }
+    .stack-body { padding: 0 0.5rem 0.5rem; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-    th, td { text-align: left; padding: 0.35rem 0.5rem; vertical-align: top; }
-    th { font-weight: 600; border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
-    .num { font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; font-size: 0.85rem; }
+    th, td {
+      text-align: left;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+    th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 600;
+      font-family: var(--mono);
+    }
+    tr:hover td { background: var(--row-hover); }
+    tr.stopped { opacity: 0.72; }
+    .state-pill {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0 6px;
+      border-radius: 0;
+      border: 1px solid color-mix(in srgb, var(--ok) 42%, transparent);
+      background: color-mix(in srgb, var(--ok) 11%, transparent);
+      color: color-mix(in srgb, var(--ok) 62%, var(--ink));
+    }
+    tr.stopped .state-pill {
+      border-color: color-mix(in srgb, var(--muted) 42%, transparent);
+      background: color-mix(in srgb, var(--muted) 11%, transparent);
+      color: var(--muted);
+    }
     .ports { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .port {
-      font-family: ui-monospace, monospace;
-      font-size: 0.8rem;
-      border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+      font-family: var(--mono);
+      font-size: 11px;
+      border: 1px solid var(--line);
       border-radius: 999px;
       padding: 0.1rem 0.45rem;
+      background: var(--chip);
     }
-    .empty { opacity: 0.7; }
+    .row-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .empty { color: var(--muted); }
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      font-family: var(--mono);
+      display: flex;
+      gap: 14px;
+    }
+    footer .right { margin-left: auto; }
+    @media (max-width: 640px) {
+      .wrap { padding: 20px 14px 48px; }
+      .stack-actions { margin-left: 0; width: 100%; }
+      th:nth-child(3), td:nth-child(3) { display: none; } /* hide service on narrow */
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button, .btn { transition: none; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>portside</h1>
-    <p class="meta">Running containers · live stats · <span id="ts">{{.Generated.Format "15:04:05"}}</span></p>
-  </header>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>portside</h1>
+        <p class="meta">containers · stacks · live · <span id="ts">{{.Generated.Format "15:04:05"}}</span></p>
+      </div>
+      <div class="toolbar">
+        <label class="toggle">
+          <input type="checkbox" id="show-stopped" {{if .ShowStopped}}checked{{end}}>
+          show stopped
+        </label>
+        <button type="button" id="theme-toggle" class="small" title="Toggle theme">☾/☀</button>
+      </div>
+    </header>
 
-  {{if .Error}}
-  <div class="error" role="alert">Docker error: {{.Error}}</div>
-  {{end}}
-
-  <section class="host" aria-label="Host stats">
-    <div class="host-row">
-      <strong>Host</strong>
-      <span>CPU <span id="host-cpu" class="num">—</span>%</span>
-      <div class="bar" title="CPU"><i id="host-cpu-bar"></i></div>
-      <span>Mem <span id="host-mem" class="num">—</span></span>
-      <div class="bar" title="Memory"><i id="host-mem-bar"></i></div>
-    </div>
-    <svg class="spark" id="spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-label="Host CPU sparkline"></svg>
-  </section>
-
-  {{if not .Stacks}}
-  <p class="empty">No running containers.</p>
-  {{else}}
-    {{range .Stacks}}
-    <section class="stack" data-stack="{{.Name}}">
-      <h2>{{.Name}}</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Service</th>
-            <th>State</th>
-            <th>CPU%</th>
-            <th>Mem</th>
-            <th>Ports</th>
-          </tr>
-        </thead>
-        <tbody>
-          {{range .Containers}}
-          <tr data-cid="{{.ID}}">
-            <td>{{.Name}}</td>
-            <td>{{if .Service}}{{.Service}}{{else}}—{{end}}</td>
-            <td data-field="state">{{.State}}</td>
-            <td class="num" data-field="cpu">—</td>
-            <td class="num" data-field="mem">—</td>
-            <td>
-              {{if .Ports}}
-              <div class="ports">
-                {{range .Ports}}
-                <span class="port">{{if .HostIP}}{{.HostIP}}:{{end}}{{.HostPort}}→{{.ContPort}}/{{.Proto}}</span>
-                {{end}}
-              </div>
-              {{else}}—{{end}}
-            </td>
-          </tr>
-          {{end}}
-        </tbody>
-      </table>
-    </section>
+    {{if .Error}}
+    <div class="error" role="alert">docker error: {{.Error}}</div>
     {{end}}
-  {{end}}
+
+    <section class="host" aria-label="Host stats">
+      <div class="host-row">
+        <strong>host</strong>
+        <span>cpu <span id="host-cpu" class="num">—</span>%</span>
+        <div class="bar" title="CPU"><i id="host-cpu-bar"></i></div>
+        <span>mem <span id="host-mem" class="num">—</span></span>
+        <div class="bar" title="Memory"><i id="host-mem-bar"></i></div>
+      </div>
+      <svg class="spark" id="spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-label="Host CPU sparkline"></svg>
+    </section>
+
+    {{if not .Stacks}}
+    <p class="empty">{{if .ShowStopped}}no containers.{{else}}no running containers.{{end}}</p>
+    {{else}}
+      {{range .Stacks}}
+      <details class="stack" open data-stack="{{.Name}}">
+        <summary>
+          <span>{{.Name}}</span>
+          <span class="meta">{{len .Containers}}</span>
+          <div class="stack-actions" onclick="event.preventDefault()">
+            <button type="button" class="small" data-stack-action="start" data-stack="{{.Name}}">start</button>
+            <button type="button" class="small" data-stack-action="stop" data-stack="{{.Name}}">stop</button>
+            <button type="button" class="small" data-stack-action="restart" data-stack="{{.Name}}">restart</button>
+            <button type="button" class="small danger" data-stack-action="remove" data-stack="{{.Name}}">delete</button>
+          </div>
+        </summary>
+        <div class="stack-body">
+          <table>
+            <thead>
+              <tr>
+                <th>name</th>
+                <th>service</th>
+                <th>state</th>
+                <th>cpu%</th>
+                <th>mem</th>
+                <th>ports</th>
+                <th>actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Containers}}
+              <tr data-cid="{{.ID}}" class="{{if not .Running}}stopped{{end}}">
+                <td>{{.Name}}</td>
+                <td>{{if .Service}}{{.Service}}{{else}}—{{end}}</td>
+                <td><span class="state-pill" data-field="state">{{.State}}</span></td>
+                <td class="num" data-field="cpu">—</td>
+                <td class="num" data-field="mem">—</td>
+                <td>
+                  {{if .Ports}}
+                  <div class="ports">
+                    {{range .Ports}}
+                    <span class="port">{{if .HostIP}}{{.HostIP}}:{{end}}{{.HostPort}}→{{.ContPort}}/{{.Proto}}</span>
+                    {{end}}
+                  </div>
+                  {{else}}—{{end}}
+                </td>
+                <td>
+                  <div class="row-actions">
+                    <button type="button" class="small" data-ctr-action="start" data-id="{{.ID}}">start</button>
+                    <button type="button" class="small" data-ctr-action="stop" data-id="{{.ID}}">stop</button>
+                    <button type="button" class="small" data-ctr-action="restart" data-id="{{.ID}}">restart</button>
+                    <button type="button" class="small danger" data-ctr-action="remove" data-id="{{.ID}}">delete</button>
+                  </div>
+                </td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </details>
+      {{end}}
+    {{end}}
+
+    <footer>
+      <span>portside</span>
+      <span class="right">127.0.0.1:8888 · delete never touches volumes</span>
+    </footer>
+  </div>
 
   <script>
   (function () {
@@ -150,23 +361,19 @@
     const hostMemBar = document.getElementById('host-mem-bar');
     const spark = document.getElementById('spark');
     const tsEl = document.getElementById('ts');
+    const showStopped = document.getElementById('show-stopped');
+    const themeBtn = document.getElementById('theme-toggle');
 
-    function fmtMB(n) {
-      if (n >= 1024) return (n / 1024).toFixed(2) + ' GB';
-      return n.toFixed(1) + ' MB';
-    }
     function fmtBytes(b) {
-      return fmtMB(b / (1024 * 1024));
+      const mb = b / (1024 * 1024);
+      if (mb >= 1024) return (mb / 1024).toFixed(2) + ' GB';
+      return mb.toFixed(1) + ' MB';
     }
     function setBar(el, pct) {
-      const p = Math.max(0, Math.min(100, pct || 0));
-      el.style.width = p.toFixed(1) + '%';
+      el.style.width = Math.max(0, Math.min(100, pct || 0)).toFixed(1) + '%';
     }
     function drawSpark(vals) {
-      if (!vals || !vals.length) {
-        spark.innerHTML = '';
-        return;
-      }
+      if (!vals || !vals.length) { spark.innerHTML = ''; return; }
       const max = Math.max(1, ...vals);
       const w = 100, h = 20;
       const step = vals.length > 1 ? w / (vals.length - 1) : w;
@@ -175,9 +382,8 @@
         const y = h - (v / max) * (h - 2) - 1;
         return x.toFixed(2) + ',' + y.toFixed(2);
       }).join(' ');
-      spark.innerHTML = '<polyline fill="none" stroke="currentColor" stroke-width="1" points="' + pts + '"/>';
+      spark.innerHTML = '<polyline fill="none" stroke="currentColor" stroke-width="1.2" points="' + pts + '"/>';
     }
-
     function apply(snap) {
       if (!snap || !snap.host) return;
       hostCpu.textContent = (snap.host.cpuPct || 0).toFixed(1);
@@ -187,10 +393,7 @@
       hostMem.textContent = total ? (fmtBytes(used) + ' / ' + fmtBytes(total)) : '—';
       setBar(hostMemBar, total ? (used / total) * 100 : 0);
       drawSpark(snap.sparkline || []);
-      if (snap.ts) {
-        const d = new Date(snap.ts);
-        tsEl.textContent = d.toLocaleTimeString();
-      }
+      if (snap.ts) tsEl.textContent = new Date(snap.ts).toLocaleTimeString();
       const byId = {};
       (snap.containers || []).forEach(function (c) { byId[c.id] = c; });
       document.querySelectorAll('tr[data-cid]').forEach(function (row) {
@@ -202,14 +405,64 @@
         if (cpu) cpu.textContent = (c.cpuPct || 0).toFixed(1);
         if (mem) mem.textContent = (c.memMB || 0).toFixed(1) + ' MB (' + (c.memPct || 0).toFixed(0) + '%)';
         if (state && c.state) state.textContent = c.state;
+        row.classList.toggle('stopped', c.state !== 'running');
       });
     }
 
     const es = new EventSource('/api/stream');
     es.onmessage = function (ev) {
-      try { apply(JSON.parse(ev.data)); } catch (e) { /* ignore */ }
+      try { apply(JSON.parse(ev.data)); } catch (e) {}
     };
-    es.onerror = function () { /* browser reconnects */ };
+
+    showStopped.addEventListener('change', function () {
+      const u = new URL(window.location.href);
+      if (showStopped.checked) u.searchParams.set('stopped', '1');
+      else u.searchParams.delete('stopped');
+      window.location.href = u.toString();
+    });
+
+    themeBtn.addEventListener('click', function () {
+      const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('satelle-theme', next); } catch (e) {}
+    });
+
+    async function postAction(url, confirmMsg) {
+      if (confirmMsg && !window.confirm(confirmMsg)) return;
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        const body = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          alert(body.error || body.failures || ('failed: ' + res.status));
+          return;
+        }
+        // Reload so SSR list reflects start/stop/remove.
+        window.location.reload();
+      } catch (e) {
+        alert(String(e));
+      }
+    }
+
+    document.addEventListener('click', function (ev) {
+      const t = ev.target;
+      if (!(t instanceof HTMLElement)) return;
+      const ctr = t.getAttribute('data-ctr-action');
+      const id = t.getAttribute('data-id');
+      if (ctr && id) {
+        const msg = ctr === 'remove' ? 'Delete container? Volumes are never removed.' : null;
+        postAction('/api/container/' + encodeURIComponent(id) + '/' + ctr, msg);
+        return;
+      }
+      const sa = t.getAttribute('data-stack-action');
+      const stack = t.getAttribute('data-stack');
+      if (sa && stack) {
+        const msg = sa === 'remove'
+          ? 'Delete stack "' + stack + '"? Removes containers and compose network only — never volumes.'
+          : null;
+        postAction('/api/stack/' + encodeURIComponent(stack) + '/' + sa, msg);
+      }
+    });
   })();
   </script>
 </body>
