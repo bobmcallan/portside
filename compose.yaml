@@ -1,0 +1,9 @@
+services:
+  portside:
+    build: .
+    # Host-side bind only — never 0.0.0.0. In-container listen is :8888.
+    ports:
+      - "127.0.0.1:8888:8888"
+    # rw: required for lifecycle actions (start/stop/delete); constitution.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

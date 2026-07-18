@@ -73,17 +73,27 @@
 [executor]
 role    = "agent"              # declared contract (agent | reviewer); do not leave inferred
 command = "in-loop"            # the orchestrator/driving session itself
+principles = "session"
 
+# Reviewer via ACP: spawn is the ACP entry only; system/payload ride the session
+# protocol. tools= is the read-only grant + client permission ceiling.
 [reviewer]
-# The FULL command template — transparent and swappable (sty_892517e7): satelle
-# substitutes {system}/{tools}/{model}/{settings}/{payload} (each one argv token);
-# payload is always also on stdin. An empty model drops the --model pair. Point
-# this at ANY agent CLI by rewriting the multi-token command. Bare single-token
-# presets (claude/grok/codex) are not accepted — the real argv must be literal.
-role    = "reviewer"           # declared contract; inference is a fallback, not the norm
-command = "claude -p --output-format json --disallowedTools Write,Edit,NotebookEdit,Bash --append-system-prompt {system} --allowedTools {tools} --model {model}"
-tools   = "Read,Grep,Glob"     # read-only grant — widen at your own risk (claude template default; a grok full template bakes its own grok-named read-only grant)
-model   = ""                   # empty inherits the CLI's default; each binding may pin its own (e.g. "sonnet"). A workflow gate/node model="…" overrides this for that gate only without a second binding (sty_19456622).
+role      = "reviewer"
+interface = "acp"
+command   = "grok agent stdio"
+tools     = "read_file,grep,list_dir"
+model     = "grok-4.5"
+principles = "session"
+
+# Planner: isolated agent for the `plan` node (agent=planner). Claude Opus;
+# read-only on source (Write/Edit denied) + Bash(satelle:*) so it can attach the
+# plan artifact. Plans only — does not implement or advance status.
+[planner]
+role    = "agent"
+command = "claude -p --output-format json --disallowedTools Write,Edit,NotebookEdit --append-system-prompt {system} --allowedTools {tools} --model {model}"
+tools   = "Read,Grep,Glob,Bash(satelle:*)"
+model   = "opus"
+principles = "session"
 
 # A named EXECUTOR agent for isolated mutating steps (e.g. a commit/push step),
 # with an explicit full command template and a wide grant:

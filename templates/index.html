@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>portside</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, sans-serif;
+      line-height: 1.4;
+    }
+    body { margin: 1.5rem; max-width: 64rem; }
+    header { margin-bottom: 1.25rem; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
+    .meta { opacity: 0.7; font-size: 0.875rem; }
+    .error {
+      border: 1px solid currentColor;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+    }
+    section.stack {
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      border-radius: 0.375rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.75rem;
+    }
+    section.stack h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.05rem;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { text-align: left; padding: 0.35rem 0.5rem; vertical-align: top; }
+    th { font-weight: 600; border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+    .ports { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+    .port {
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+      border-radius: 999px;
+      padding: 0.1rem 0.45rem;
+    }
+    .empty { opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>portside</h1>
+    <p class="meta">Running containers · grouped by compose project · {{.Generated.Format "15:04:05"}}</p>
+  </header>
+
+  {{if .Error}}
+  <div class="error" role="alert">Docker error: {{.Error}}</div>
+  {{end}}
+
+  {{if not .Stacks}}
+  <p class="empty">No running containers.</p>
+  {{else}}
+    {{range .Stacks}}
+    <section class="stack">
+      <h2>{{.Name}}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Service</th>
+            <th>State</th>
+            <th>Status</th>
+            <th>Ports</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Containers}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{if .Service}}{{.Service}}{{else}}—{{end}}</td>
+            <td>{{.State}}</td>
+            <td>{{.Status}}</td>
+            <td>
+              {{if .Ports}}
+              <div class="ports">
+                {{range .Ports}}
+                <span class="port">{{if .HostIP}}{{.HostIP}}:{{end}}{{.HostPort}}→{{.ContPort}}/{{.Proto}}</span>
+                {{end}}
+              </div>
+              {{else}}—{{end}}
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </section>
+    {{end}}
+  {{end}}
+</body>
+</html>
