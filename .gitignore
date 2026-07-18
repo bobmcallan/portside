@@ -1,0 +1,10 @@
+# Build artifacts
+/portside
+/bin/
+*.exe
+
+# Go
+/vendor/
+
+# Env
+.env
