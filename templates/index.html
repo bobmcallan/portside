@@ -19,6 +19,41 @@
       padding: 0.75rem 1rem;
       margin-bottom: 1rem;
     }
+    .host {
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      border-radius: 0.375rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      display: grid;
+      gap: 0.5rem;
+    }
+    .host-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    .bar {
+      flex: 1 1 8rem;
+      min-width: 8rem;
+      height: 0.5rem;
+      background: color-mix(in srgb, currentColor 12%, transparent);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: currentColor;
+      opacity: 0.55;
+    }
+    .spark {
+      width: 100%;
+      height: 2rem;
+      display: block;
+    }
     section.stack {
       border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
       border-radius: 0.375rem;
@@ -32,6 +67,7 @@
     table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     th, td { text-align: left; padding: 0.35rem 0.5rem; vertical-align: top; }
     th { font-weight: 600; border-bottom: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+    .num { font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; font-size: 0.85rem; }
     .ports { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .port {
       font-family: ui-monospace, monospace;
@@ -46,18 +82,29 @@
 <body>
   <header>
     <h1>portside</h1>
-    <p class="meta">Running containers · grouped by compose project · {{.Generated.Format "15:04:05"}}</p>
+    <p class="meta">Running containers · live stats · <span id="ts">{{.Generated.Format "15:04:05"}}</span></p>
   </header>
 
   {{if .Error}}
   <div class="error" role="alert">Docker error: {{.Error}}</div>
   {{end}}
 
+  <section class="host" aria-label="Host stats">
+    <div class="host-row">
+      <strong>Host</strong>
+      <span>CPU <span id="host-cpu" class="num">—</span>%</span>
+      <div class="bar" title="CPU"><i id="host-cpu-bar"></i></div>
+      <span>Mem <span id="host-mem" class="num">—</span></span>
+      <div class="bar" title="Memory"><i id="host-mem-bar"></i></div>
+    </div>
+    <svg class="spark" id="spark" viewBox="0 0 100 20" preserveAspectRatio="none" aria-label="Host CPU sparkline"></svg>
+  </section>
+
   {{if not .Stacks}}
   <p class="empty">No running containers.</p>
   {{else}}
     {{range .Stacks}}
-    <section class="stack">
+    <section class="stack" data-stack="{{.Name}}">
       <h2>{{.Name}}</h2>
       <table>
         <thead>
@@ -65,17 +112,19 @@
             <th>Name</th>
             <th>Service</th>
             <th>State</th>
-            <th>Status</th>
+            <th>CPU%</th>
+            <th>Mem</th>
             <th>Ports</th>
           </tr>
         </thead>
         <tbody>
           {{range .Containers}}
-          <tr>
+          <tr data-cid="{{.ID}}">
             <td>{{.Name}}</td>
             <td>{{if .Service}}{{.Service}}{{else}}—{{end}}</td>
-            <td>{{.State}}</td>
-            <td>{{.Status}}</td>
+            <td data-field="state">{{.State}}</td>
+            <td class="num" data-field="cpu">—</td>
+            <td class="num" data-field="mem">—</td>
             <td>
               {{if .Ports}}
               <div class="ports">
@@ -92,5 +141,76 @@
     </section>
     {{end}}
   {{end}}
+
+  <script>
+  (function () {
+    const hostCpu = document.getElementById('host-cpu');
+    const hostMem = document.getElementById('host-mem');
+    const hostCpuBar = document.getElementById('host-cpu-bar');
+    const hostMemBar = document.getElementById('host-mem-bar');
+    const spark = document.getElementById('spark');
+    const tsEl = document.getElementById('ts');
+
+    function fmtMB(n) {
+      if (n >= 1024) return (n / 1024).toFixed(2) + ' GB';
+      return n.toFixed(1) + ' MB';
+    }
+    function fmtBytes(b) {
+      return fmtMB(b / (1024 * 1024));
+    }
+    function setBar(el, pct) {
+      const p = Math.max(0, Math.min(100, pct || 0));
+      el.style.width = p.toFixed(1) + '%';
+    }
+    function drawSpark(vals) {
+      if (!vals || !vals.length) {
+        spark.innerHTML = '';
+        return;
+      }
+      const max = Math.max(1, ...vals);
+      const w = 100, h = 20;
+      const step = vals.length > 1 ? w / (vals.length - 1) : w;
+      const pts = vals.map((v, i) => {
+        const x = i * step;
+        const y = h - (v / max) * (h - 2) - 1;
+        return x.toFixed(2) + ',' + y.toFixed(2);
+      }).join(' ');
+      spark.innerHTML = '<polyline fill="none" stroke="currentColor" stroke-width="1" points="' + pts + '"/>';
+    }
+
+    function apply(snap) {
+      if (!snap || !snap.host) return;
+      hostCpu.textContent = (snap.host.cpuPct || 0).toFixed(1);
+      setBar(hostCpuBar, snap.host.cpuPct);
+      const used = snap.host.memUsed || 0;
+      const total = snap.host.memTotal || 0;
+      hostMem.textContent = total ? (fmtBytes(used) + ' / ' + fmtBytes(total)) : '—';
+      setBar(hostMemBar, total ? (used / total) * 100 : 0);
+      drawSpark(snap.sparkline || []);
+      if (snap.ts) {
+        const d = new Date(snap.ts);
+        tsEl.textContent = d.toLocaleTimeString();
+      }
+      const byId = {};
+      (snap.containers || []).forEach(function (c) { byId[c.id] = c; });
+      document.querySelectorAll('tr[data-cid]').forEach(function (row) {
+        const c = byId[row.getAttribute('data-cid')];
+        if (!c) return;
+        const cpu = row.querySelector('[data-field=cpu]');
+        const mem = row.querySelector('[data-field=mem]');
+        const state = row.querySelector('[data-field=state]');
+        if (cpu) cpu.textContent = (c.cpuPct || 0).toFixed(1);
+        if (mem) mem.textContent = (c.memMB || 0).toFixed(1) + ' MB (' + (c.memPct || 0).toFixed(0) + '%)';
+        if (state && c.state) state.textContent = c.state;
+      });
+    }
+
+    const es = new EventSource('/api/stream');
+    es.onmessage = function (ev) {
+      try { apply(JSON.parse(ev.data)); } catch (e) { /* ignore */ }
+    };
+    es.onerror = function () { /* browser reconnects */ };
+  })();
+  </script>
 </body>
 </html>

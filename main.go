@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 )
@@ -65,6 +65,11 @@ func main() {
 		log.Fatalf("parse templates: %v", err)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	col := newCollector(cli)
+	go col.run(ctx)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
@@ -72,10 +77,10 @@ func main() {
 			return
 		}
 		data := pageData{Generated: time.Now()}
-		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-		defer cancel()
+		reqCtx, reqCancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer reqCancel()
 
-		list, err := cli.ContainerList(ctx, container.ListOptions{All: false})
+		list, err := cli.ContainerList(reqCtx, container.ListOptions{All: false})
 		if err != nil {
 			data.Error = err.Error()
 			log.Printf("container list: %v", err)
@@ -88,6 +93,7 @@ func main() {
 			log.Printf("render: %v", err)
 		}
 	})
+	mux.HandleFunc("/api/stream", col.serveSSE)
 
 	addr := listenAddr
 	if v := os.Getenv("PORTSIDE_ADDR"); v != "" {
