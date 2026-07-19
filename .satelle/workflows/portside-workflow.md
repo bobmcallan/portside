@@ -28,9 +28,9 @@ The three performing phases after plan, in the repo's required order:
 
 - `in_progress` — implement the slice and its tests in-loop.
 - `integration` — **commit and push** the slice.
-- `deploy` — **local docker deploy/update**: build the image from the committed
-  tree, bring the compose stack up on `127.0.0.1:8888`, and probe it before
-  `done`.
+- `deploy` — **local docker deploy/update**: run `./scripts/deploy.sh` (builds
+  the image from the committed tree, brings the compose stack up on
+  `127.0.0.1:8888`, and probes it) before `done`.
 
 `integration -> in_progress` and `deploy -> in_progress` are recovery edges: a
 reject returns the story to work to fix and re-traverse, never bypass. `blocked`
@@ -97,7 +97,7 @@ guardrails:
     - Enter plan before in_progress; the planner attaches a plan that covers every AC; do not skip plan-review.
     - Perform in_progress, integration, and deploy IN-LOOP as the driving session; do not dispatch an isolated sub-process for coding, commit, push, or deploy.
     - Order is fixed: plan, then implement in_progress, then commit/push in integration, then the local docker deploy/update in deploy.
-    - Prove the local docker deploy (build the image, compose up on 127.0.0.1:8888, probe it) before done.
+    - Prove the local docker deploy by running ./scripts/deploy.sh (build + compose up on 127.0.0.1:8888 + probe) before done.
   ask_first: []
   never:
     - Place any state after done — done is always the terminal success state.

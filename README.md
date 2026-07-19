@@ -44,11 +44,11 @@ POST /api/stack/{project}/{start|stop|restart|remove}
 
 ## Status
 
-MVP shipped. `docker compose up -d --build` → http://127.0.0.1:8888
+MVP shipped. `./scripts/deploy.sh` → http://127.0.0.1:8888
 
 ## Run
 
 ```bash
-docker compose up -d --build
+./scripts/deploy.sh
 # open http://127.0.0.1:8888
 ```
