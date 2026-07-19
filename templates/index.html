@@ -27,7 +27,7 @@
       --fail: #e74c3c;
       --ok: #2f6f4f;
       --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-      --content-max: 1100px;
+      --content-max: 1600px;
       --radius: 8px;
       --control-height: 2.2rem;
     }
@@ -47,10 +47,10 @@
       margin: 0;
       background: var(--bg);
       color: var(--ink);
-      font: 15px/1.5 "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     .wrap {
-      width: 100%;
+      width: 90%;
       max-width: var(--content-max);
       margin: 0 auto;
       padding: 28px 24px 64px;
@@ -172,7 +172,6 @@
       margin-bottom: 0.75rem;
       overflow: hidden;
     }
-    details.stack[open] { border-color: var(--line); }
     details.stack > summary {
       list-style: none;
       cursor: pointer;
@@ -232,6 +231,8 @@
       background: var(--chip);
     }
     .row-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    /* Hide lifecycle actions that don't apply to the current state. */
+    button.hidden-action { display: none !important; }
     .empty { color: var(--muted); }
     footer {
       margin-top: 2.5rem;
@@ -245,7 +246,8 @@
     }
     footer .right { margin-left: auto; }
     @media (max-width: 640px) {
-      .wrap { padding: 20px 14px 48px; }
+      /* full width at phone sizes so 90% does not double-inset with padding */
+      .wrap { width: 100%; padding: 20px 14px 48px; }
       .stack-actions { margin-left: 0; width: 100%; }
       th:nth-child(3), td:nth-child(3) { display: none; } /* hide service on narrow */
     }
@@ -266,7 +268,7 @@
           <input type="checkbox" id="show-stopped" {{if .ShowStopped}}checked{{end}}>
           show stopped
         </label>
-        <button type="button" id="theme-toggle" class="small" title="Toggle theme">☾/☀</button>
+        <button type="button" id="theme-toggle" class="small" aria-label="Switch to dark theme" title="Switch to dark theme">☾</button>
       </div>
     </header>
 
@@ -293,10 +295,12 @@
         <summary>
           <span>{{.Name}}</span>
           <span class="meta">{{len .Containers}}</span>
-          <div class="stack-actions" onclick="event.preventDefault()">
-            <button type="button" class="small" data-stack-action="start" data-stack="{{.Name}}">start</button>
-            <button type="button" class="small" data-stack-action="stop" data-stack="{{.Name}}">stop</button>
-            <button type="button" class="small" data-stack-action="restart" data-stack="{{.Name}}">restart</button>
+          {{$anyRunning := false}}{{$anyStopped := false}}
+          {{range .Containers}}{{if .Running}}{{$anyRunning = true}}{{else}}{{$anyStopped = true}}{{end}}{{end}}
+          <div class="stack-actions" data-stack-actions="{{.Name}}" onclick="event.preventDefault()">
+            <button type="button" class="small{{if not $anyStopped}} hidden-action{{end}}" data-stack-action="start" data-stack="{{.Name}}">start</button>
+            <button type="button" class="small{{if not $anyRunning}} hidden-action{{end}}" data-stack-action="stop" data-stack="{{.Name}}">stop</button>
+            <button type="button" class="small{{if not $anyRunning}} hidden-action{{end}}" data-stack-action="restart" data-stack="{{.Name}}">restart</button>
             <button type="button" class="small danger" data-stack-action="remove" data-stack="{{.Name}}">delete</button>
           </div>
         </summary>
@@ -332,9 +336,9 @@
                 </td>
                 <td>
                   <div class="row-actions">
-                    <button type="button" class="small" data-ctr-action="start" data-id="{{.ID}}">start</button>
-                    <button type="button" class="small" data-ctr-action="stop" data-id="{{.ID}}">stop</button>
-                    <button type="button" class="small" data-ctr-action="restart" data-id="{{.ID}}">restart</button>
+                    <button type="button" class="small{{if .Running}} hidden-action{{end}}" data-ctr-action="start" data-id="{{.ID}}">start</button>
+                    <button type="button" class="small{{if not .Running}} hidden-action{{end}}" data-ctr-action="stop" data-id="{{.ID}}">stop</button>
+                    <button type="button" class="small{{if not .Running}} hidden-action{{end}}" data-ctr-action="restart" data-id="{{.ID}}">restart</button>
                     <button type="button" class="small danger" data-ctr-action="remove" data-id="{{.ID}}">delete</button>
                   </div>
                 </td>
@@ -384,6 +388,20 @@
       }).join(' ');
       spark.innerHTML = '<polyline fill="none" stroke="currentColor" stroke-width="1.2" points="' + pts + '"/>';
     }
+    function setActionVisibility(root, running) {
+      if (!root) return;
+      root.querySelectorAll('[data-ctr-action], [data-stack-action]').forEach(function (btn) {
+        const action = btn.getAttribute('data-ctr-action') || btn.getAttribute('data-stack-action');
+        if (action === 'remove') {
+          btn.classList.remove('hidden-action');
+          return;
+        }
+        // start only when stopped; stop/restart only when running.
+        const show = action === 'start' ? !running : !!running;
+        btn.classList.toggle('hidden-action', !show);
+      });
+    }
+
     function apply(snap) {
       if (!snap || !snap.host) return;
       hostCpu.textContent = (snap.host.cpuPct || 0).toFixed(1);
@@ -396,6 +414,8 @@
       if (snap.ts) tsEl.textContent = new Date(snap.ts).toLocaleTimeString();
       const byId = {};
       (snap.containers || []).forEach(function (c) { byId[c.id] = c; });
+      // Stack aggregates: any running / any stopped among rows currently rendered.
+      const stackAgg = {};
       document.querySelectorAll('tr[data-cid]').forEach(function (row) {
         const c = byId[row.getAttribute('data-cid')];
         if (!c) return;
@@ -405,9 +425,46 @@
         if (cpu) cpu.textContent = (c.cpuPct || 0).toFixed(1);
         if (mem) mem.textContent = (c.memMB || 0).toFixed(1) + ' MB (' + (c.memPct || 0).toFixed(0) + '%)';
         if (state && c.state) state.textContent = c.state;
-        row.classList.toggle('stopped', c.state !== 'running');
+        const running = c.state === 'running';
+        row.classList.toggle('stopped', !running);
+        setActionVisibility(row.querySelector('.row-actions'), running);
+        const stackEl = row.closest('details.stack');
+        if (stackEl) {
+          const name = stackEl.getAttribute('data-stack') || '';
+          if (!stackAgg[name]) stackAgg[name] = { anyRunning: false, anyStopped: false };
+          if (running) stackAgg[name].anyRunning = true;
+          else stackAgg[name].anyStopped = true;
+        }
+      });
+      document.querySelectorAll('[data-stack-actions]').forEach(function (box) {
+        const name = box.getAttribute('data-stack-actions');
+        const agg = stackAgg[name];
+        if (!agg) return;
+        box.querySelectorAll('[data-stack-action]').forEach(function (btn) {
+          const action = btn.getAttribute('data-stack-action');
+          if (action === 'remove') {
+            btn.classList.remove('hidden-action');
+            return;
+          }
+          if (action === 'start') {
+            btn.classList.toggle('hidden-action', !agg.anyStopped);
+            return;
+          }
+          // stop / restart when any container is running
+          btn.classList.toggle('hidden-action', !agg.anyRunning);
+        });
       });
     }
+
+    function syncThemeToggle() {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      // Glyph reflects the action: moon → switch to dark, sun → switch to light.
+      themeBtn.textContent = dark ? '☀' : '☾';
+      const label = dark ? 'Switch to light theme' : 'Switch to dark theme';
+      themeBtn.setAttribute('aria-label', label);
+      themeBtn.setAttribute('title', label);
+    }
+    syncThemeToggle();
 
     const es = new EventSource('/api/stream');
     es.onmessage = function (ev) {
@@ -426,6 +483,7 @@
       const next = cur === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
       try { localStorage.setItem('satelle-theme', next); } catch (e) {}
+      syncThemeToggle();
     });
 
     async function postAction(url, confirmMsg) {
