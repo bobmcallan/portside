@@ -230,7 +230,15 @@
       padding: 0.1rem 0.45rem;
       background: var(--chip);
     }
-    .row-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    /* Right-align like stack-actions (margin-left: auto on the summary row). */
+    th:last-child, td:last-child { text-align: right; }
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      justify-content: flex-end;
+      width: 100%;
+    }
     /* Hide lifecycle actions that don't apply to the current state. */
     button.hidden-action { display: none !important; }
     .empty { color: var(--muted); }
