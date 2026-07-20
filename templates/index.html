@@ -187,7 +187,20 @@
     details.stack > summary:hover { background: var(--row-hover); }
     .stack-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-left: auto; }
     .stack-body { padding: 0 0.5rem 0.5rem; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    /* Shared fixed grid so every stack panel aligns columns vertically. */
+    table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    th:nth-child(1), td:nth-child(1) { width: 20%; } /* name */
+    th:nth-child(2), td:nth-child(2) { width: 12%; } /* service */
+    th:nth-child(3), td:nth-child(3) { width: 8%; }  /* state */
+    th:nth-child(4), td:nth-child(4) { width: 6%; }  /* cpu% */
+    th:nth-child(5), td:nth-child(5) { width: 12%; } /* mem */
+    th:nth-child(6), td:nth-child(6) { width: 18%; } /* ports */
+    th:nth-child(7), td:nth-child(7) { width: 24%; } /* actions */
     th, td {
       text-align: left;
       padding: 9px 10px;
@@ -201,6 +214,12 @@
       color: var(--muted);
       font-weight: 600;
       font-family: var(--mono);
+    }
+    /* Long name/service: ellipsis; full value via title attribute on the cell. */
+    .trunc {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     tr:hover td { background: var(--row-hover); }
     tr.stopped { opacity: 0.72; }
@@ -221,7 +240,7 @@
       background: color-mix(in srgb, var(--muted) 11%, transparent);
       color: var(--muted);
     }
-    .ports { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+    .ports { display: flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; }
     .port {
       font-family: var(--mono);
       font-size: 11px;
@@ -229,16 +248,18 @@
       border-radius: 999px;
       padding: 0.1rem 0.45rem;
       background: var(--chip);
+      white-space: nowrap;
     }
     /* Right-align like stack-actions (margin-left: auto on the summary row). */
     th:last-child, td:last-child { text-align: right; }
     .row-actions {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 0.3rem;
       justify-content: flex-end;
       width: 100%;
     }
+    td.num { white-space: nowrap; }
     /* Hide lifecycle actions that don't apply to the current state. */
     button.hidden-action { display: none !important; }
     .empty { color: var(--muted); }
@@ -257,7 +278,9 @@
       /* full width at phone sizes so 90% does not double-inset with padding */
       .wrap { width: 100%; padding: 20px 14px 48px; }
       .stack-actions { margin-left: 0; width: 100%; }
-      th:nth-child(3), td:nth-child(3) { display: none; } /* hide service on narrow */
+      /* service is column 2 (name=1, service=2, state=3, …) */
+      th:nth-child(2), td:nth-child(2) { display: none; }
+      .row-actions { flex-wrap: wrap; }
     }
     @media (prefers-reduced-motion: reduce) {
       button, .btn { transition: none; }
@@ -328,8 +351,8 @@
             <tbody>
               {{range .Containers}}
               <tr data-cid="{{.ID}}" class="{{if not .Running}}stopped{{end}}">
-                <td>{{.Name}}</td>
-                <td>{{if .Service}}{{.Service}}{{else}}—{{end}}</td>
+                <td class="trunc" title="{{.Name}}">{{.Name}}</td>
+                <td class="trunc" title="{{if .Service}}{{.Service}}{{else}}—{{end}}">{{if .Service}}{{.Service}}{{else}}—{{end}}</td>
                 <td><span class="state-pill" data-field="state">{{.State}}</span></td>
                 <td class="num" data-field="cpu">—</td>
                 <td class="num" data-field="mem">—</td>

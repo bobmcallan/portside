@@ -35,10 +35,25 @@ func TestIndexTemplateRender(t *testing.T) {
 		"aria-label",
 		"hidden-action",
 		"data-stack-actions",
+		"table-layout: fixed",
+		".trunc",
+		"text-overflow: ellipsis",
+		// Shared column widths (defined once for all stack tables).
+		"th:nth-child(1), td:nth-child(1)",
+		"th:nth-child(7), td:nth-child(7)",
+		// Narrow media hides service = column 2 (not state = 3).
+		"th:nth-child(2), td:nth-child(2) { display: none; }",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("missing %q", want)
 		}
+	}
+	if strings.Count(s, "table-layout: fixed") != 1 {
+		t.Errorf("table-layout:fixed should appear once, got %d", strings.Count(s, "table-layout: fixed"))
+	}
+	// Name/service cells carry title for full value on hover.
+	if !strings.Contains(s, `class="trunc" title="up"`) {
+		t.Error("name cell should be .trunc with title")
 	}
 	for _, bad := range []string{"Space Grotesk", "details.stack[open]", "☾/☀"} {
 		if strings.Contains(s, bad) {
