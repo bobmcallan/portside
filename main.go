@@ -101,6 +101,7 @@ func main() {
 	})
 	mux.HandleFunc("/api/stream", col.serveSSE)
 	lc.register(mux)
+	registerAssets(mux)
 
 	addr := listenAddr
 	if v := os.Getenv("PORTSIDE_ADDR"); v != "" {
