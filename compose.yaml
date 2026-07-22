@@ -1,6 +1,7 @@
 services:
   portside:
     build: .
+    restart: on-failure:3
     # Host-side bind only — never 0.0.0.0. In-container listen is :8888.
     ports:
       - "127.0.0.1:8888:8888"
