@@ -7,7 +7,7 @@ category: substrate
 tags: reviewer-audit, quality, substrate
 created: 2026-07-10T00:00:00Z
 updated: 2026-07-10T00:00:00Z
-embedded_sha: 6306d6e9c8881ab6cd14c1223a4cec8654b92d6ab01dbe8a4d7409ba84b205f3
+embedded_sha: 58ec4299accec90ea9b6488ef257b2401bfc85fbb7fe158aac6278b5e40e8087
 ---
 
 # Audit all reviewer skills: primary objective + strip DO/ACTIONS
@@ -37,17 +37,17 @@ Exclude this audit skill (`type:audit`). Workflows out of scope.
 
 1. Enumerate the corpus (name **or** `type:reviewer`).
 2. Score each: principle objective **OK | MISSING | MISALIGNED**; list **DO/ACTIONS
-   to remove**; bound-input notes.
+ to remove**; bound-input notes.
 3. Write the **recommendation report** to:
-   **`.satelle/tasks/tsk_reviewer-objective-audit/recommendation-report.md`**
+ **`.satelle/tasks/tsk_reviewer-objective-audit/recommendation-report.md`**
 4. JUDGE AND REPORT ONLY — do not edit reviewer skills unless separately asked.
 
 ## Acceptance Criteria
 
 1. Skill `satelle-reviewer-objective-audit` is present and used as the rubric.
 2. Every skill matching name-`*review*` or `type:reviewer` appears in the report
-   with OK|MISSING|MISALIGNED and DO/ACTIONS (or none).
+ with OK|MISSING|MISALIGNED and DO/ACTIONS (or none).
 3. Recommendation report is under
-   `.satelle/tasks/tsk_reviewer-objective-audit/recommendation-report.md`
-   with summary counts and ordered recommendations.
+ `.satelle/tasks/tsk_reviewer-objective-audit/recommendation-report.md`
+ with summary counts and ordered recommendations.
 4. Re-runnable from `done` (new execution per run).
