@@ -54,9 +54,5 @@
         ]
       }
     ]
-  },
-  "statusLine": {
-    "command": "satelle status --line",
-    "type": "command"
   }
 }

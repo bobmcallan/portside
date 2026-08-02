@@ -29,7 +29,43 @@ agents, no alerting, no historical persistence.
    don't invent a parallel visual language.
 
 **Where the process lives:** authored substrate under `.satelle/` (workflows,
-principles, skills). Work is satelle-gated: stories bind to
-`workflow:portside-workflow` — implement in-loop (`in_progress`), **commit/push**
-(`integration`), **local docker deploy/update** (`deploy`), then `done`. Give
-every story numbered acceptance criteria and satisfy them before `done`.
+principles, skills). Work is satelle-gated: the lifecycle is the **derived route**
+in `.satelle/workflows/done.md` + `step.md` — `plan` (dispatched to the Opus
+planner), implement in-loop (`in_progress`), **commit/push** (`integration`),
+**local docker deploy/update** (`deploy`), then `done`. Give every story numbered
+acceptance criteria and satisfy them before `done`.
+
+## Delivery intent
+
+The route describes states, obligations and gates; it never described intent.
+What follows is the operator intent carried over from the retired
+`portside-workflow` DOT graph — its `goal=` and `guardrails:` block — because the
+route grammar has no home for it and nothing warns when it goes missing.
+
+**Goal of a portside story:** drive it to done — planned against the ACs,
+implemented in-loop with tests, committed and pushed, then deployed and probed on
+local docker at `127.0.0.1:8888`, every acceptance criterion met.
+
+**Always:**
+
+- Drive an engaged item to a terminal state (`done` or `cancelled`) — don't leave
+  work open indefinitely.
+- Give a story numbered acceptance criteria before starting, and satisfy them
+  before moving to `done`.
+- Enter `plan` before `in_progress`; the planner attaches a plan that covers every
+  AC; do not skip plan-review.
+- Perform `in_progress`, `integration` and `deploy` **in-loop** as the driving
+  session; do not dispatch an isolated sub-process for coding, commit, push or
+  deploy.
+- Order is fixed: plan, then implement in `in_progress`, then commit/push in
+  `integration`, then the local docker deploy/update in `deploy`.
+- Prove the local docker deploy by running `./scripts/deploy.sh` (build + compose
+  up on `127.0.0.1:8888` + probe) before `done`.
+
+**Never:**
+
+- Place any state after `done` — `done` is always the terminal success state.
+- Bind or expose the service on anything but `127.0.0.1` (ground rule 2).
+- Delete a stack's volumes — delete removes containers and the compose network
+  only (ground rule 3).
+- Mark an item `done` with unmet acceptance criteria.
