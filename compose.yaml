@@ -6,5 +6,8 @@ services:
     ports:
       - "127.0.0.1:8888:8888"
     # rw: required for lifecycle actions (start/stop/delete); constitution.
+    # Host side is DOCKER_SOCK (scripts/deploy.sh derives it from a unix://
+    # DOCKER_HOST, e.g. rootless /run/user/<uid>/docker.sock); the in-container
+    # path is fixed, so the client's default endpoint always finds it.
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock

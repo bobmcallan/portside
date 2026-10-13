@@ -26,7 +26,7 @@ No historical database, no multi-host/agents, no RBAC/OIDC/auth, no notification
 | Frontend | Vanilla JS + CSS; stacks as collapsible groups, CPU/mem bars, port chips, action buttons |
 | "Delete stack" | Removes containers + the compose network only — **never volumes** (data is protected by design) |
 | Tiny history | ~60s in-memory ring for sparklines; no persistence |
-| Deploy | Runs as a container, mounts `docker.sock` (rw, needed for actions), bound to `127.0.0.1:8888` |
+| Deploy | Runs as a container, mounts `docker.sock` (rw, needed for actions; host path from `DOCKER_SOCK`, see `compose.yaml`), bound to `127.0.0.1:8888` |
 | Logs | Out of v1 (easy to add later as a stream endpoint) |
 
 ## Security note
