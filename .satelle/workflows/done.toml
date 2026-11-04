@@ -1,0 +1,50 @@
+[meta]
+name = "done"
+type = "workflow"
+scope = "project"
+description = "portside's declaration of done — one table per story category, listing the obligations discharged before work closes, plus the park and cancel states the binary synthesises. Half of a derived route; step.toml is the other half."
+
+# The working lane: a story is planned by a dispatched Opus planner, coded
+# in-loop, integrated (commit + push), deployed to local docker, then closed.
+#
+# Because an authored done table overrides the shipped one for that category,
+# the container and task-run tables are re-declared here from the shipped
+# default so they resolve by exact name rather than falling onto the deploy
+# spine.
+#
+# DECISION, not omission: no [substrate] table. The retired DOT graph had no
+# substrate lane, so substrate stories fall through to the working lane and are
+# deployed like code. Authoring a markdown-only lane would be a process change,
+# not a conversion.
+
+["*"]
+obligations = ["raised", "planned", "coded", "integrated", "deployed", "closed"]
+# park names NO advisor: the retired graph had no on_enter_agent, and the
+# shipped blocked-triage advisor was never part of this repo's lifecycle.
+park = { state = "blocked", gate = "satelle-story-blocked-review" }
+cancel = { state = "cancelled", gate = "satelle-story-cancel-review" }
+# A reject in integration or deploy returns the story to work to fix and
+# re-traverse, never to bypass.
+recover = { step = "in_progress", from = ["integration", "deploy"] }
+
+# Containers are closed by their children. Nothing is performed on a container,
+# so it has no working lane and — deliberately — no park. Both container kinds
+# name themselves, or they would fall onto `*` and be asked to deploy.
+[epic-parent]
+obligations = ["raised", "children-resolved"]
+cancel = { state = "cancelled", gate = "satelle-story-cancel-review" }
+
+[parent]
+obligations = ["raised", "children-resolved"]
+cancel = { state = "cancelled", gate = "satelle-story-cancel-review" }
+
+# Task runs: an action, then its verification. No park, and cancel names no
+# gate — a run that should stop simply stops. execution and task are separate
+# tables so neither falls through to `*` and gets gated as though it were code.
+[execution]
+obligations = ["raised", "run", "run-verified"]
+cancel = { state = "cancelled" }
+
+[task]
+obligations = ["raised", "run", "run-verified"]
+cancel = { state = "cancelled" }

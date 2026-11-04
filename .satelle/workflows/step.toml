@@ -1,0 +1,104 @@
+[meta]
+name = "step"
+type = "workflow"
+scope = "project"
+description = "portside's step catalogue — the steps and always-on gates a route selects from by obligation. Half of a derived route; done.toml is the other half."
+
+# The one dispatched step is `planned`, allocated to the read-only planner agent
+# (profile pi-planner via agents.local.toml; satelle agent validate shows the
+# resolved command). Everything after it is performed in-loop by the driving
+# session — no isolated sub-process codes, commits, pushes or deploys.
+
+# ---- The working lane (done.toml ["*"]) ----
+
+# Entry state for every lane.
+[raised]
+status = "backlog"
+start = true
+
+# Entry is ungated, as in the retired graph's backlog -> plan edge.
+[planned]
+status = "plan"
+agent = "planner"
+skills = ["plan"]
+requires = ["raised"]
+
+# Implement the slice and its tests in-loop. The plan-review gate was the
+# retired graph's plan -> in_progress edge, re-homed onto the step it admits.
+[coded]
+status = "in_progress"
+agent = "executor"
+reviewers = ["satelle-story-plan-review"]
+reviewer_agent = "reviewer"
+requires = ["planned"]
+
+# Commit and push, in-loop. Entry ungated, as in the graph.
+[integrated]
+status = "integration"
+agent = "executor"
+requires = ["coded"]
+
+# Local docker deploy/update, in-loop: ./scripts/deploy.sh builds the image,
+# brings compose up on 127.0.0.1:8888 and probes it. Entry ungated.
+[deployed]
+status = "deploy"
+agent = "executor"
+requires = ["integrated"]
+
+# DECISION, recorded deliberately: the retired graph closed UNGATED. That was
+# judged an oversight, so the close is gated here, matching the constitution's
+# requirement that every acceptance criterion be satisfied before done.
+[closed]
+status = "done"
+reviewers = ["satelle-story-done-review"]
+reviewer_agent = "reviewer"
+terminal = true
+requires = ["deployed"]
+
+# ---- Container close (done.toml [epic-parent], [parent]) ----
+
+# Carried forward from the shipped default. Nothing performs on this lane, so
+# agent = "reviewer" marks it as judging only.
+[children-resolved]
+status = "done"
+agent = "reviewer"
+reviewers = ["satelle-story-done-review"]
+terminal = true
+requires = ["raised"]
+
+# ---- Task run (done.toml [execution], [task]) ----
+
+# Validates the run BEFORE it begins.
+[run]
+status = "in_progress"
+agent = "executor"
+reviewers = ["satelle-task-validate-before-review"]
+reviewer_agent = "reviewer"
+requires = ["raised"]
+
+# Validates the run AFTER it has happened — what makes a run verified rather
+# than merely finished.
+[run-verified]
+status = "done"
+reviewers = ["satelle-task-validate-after-review"]
+reviewer_agent = "reviewer"
+terminal = true
+requires = ["run"]
+
+# ---- Always-on gates ----
+
+# Fires on entry to every step. DECISION, not omission: `for` does not name the
+# task-run lanes — a run has its own before/after validators as its record.
+[[gate]]
+skill = "satelle-step-summary"
+agent = "reviewer"
+mandatory = true
+for = ["*", "epic-parent", "parent"]
+
+# Fences the estimate on entry to in_progress and the actual on entry to done.
+# Working lane only: containers do no work to estimate, and a run is not estimated.
+[[gate]]
+skill = "satelle-estimate-actual-review"
+agent = "reviewer"
+on = ["in_progress", "done"]
+for = ["*"]
